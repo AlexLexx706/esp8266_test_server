@@ -59,6 +59,15 @@ user_init()
 			ipaddr_ntoa_r(&info.gw, gw_buffer, sizeof(gw_buffer)));
 	}
 
+	gpio_init();
+
+    //Set GPIO2 to output mode
+    PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO2_U, FUNC_GPIO2);
+
+    //Set GPIO2 low
+    gpio_output_set(0, BIT2, BIT2, 0);
+
+
 	//setup timer
 	//Disarm timer
 	os_timer_disarm(&some_timer);

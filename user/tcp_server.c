@@ -2,7 +2,7 @@
 #include "user_interface.h"
 #include "espconn.h"
 #include "osapi.h"
-#include "command_parcer.h"
+#include "controller.h"
 
 uint32 receive_bytes_count = 0;
 CommandParcer command_parcer;
@@ -26,18 +26,6 @@ data_send(void *arg, char *psend)
 }
 
 
-LOCAL void ICACHE_FLASH_ATTR
-parce_handler(CommandParcer * parcer, enum CommandParcerError error, void * user_data) {
-    char buffer[128];
-    os_sprintf(buffer,
-        "prefix:%s cmd:%s param:%s value:%s error:%d\n",
-            parcer->prefix,
-            parcer->cmd,
-            parcer->param,
-            parcer->value,
-            error);
-    data_send(user_data, buffer);
-}
 
 
 /******************************************************************************
@@ -51,22 +39,9 @@ parce_handler(CommandParcer * parcer, enum CommandParcerError error, void * user
 LOCAL void ICACHE_FLASH_ATTR
 webserver_recv(void *arg, char *pusrdata, unsigned short length)
 {
-    int i;
-    for (i = 0; i < length; i++) {
-        os_printf("%c", pusrdata[i]);
-    }
-    os_printf("\n", pusrdata[i]);
-
-    struct espconn *pesp_conn = arg;
-    // os_printf("webserver's %d.%d.%d.%d:%d receive data_len: %u\n",
-    //  pesp_conn->proto.tcp->remote_ip[0],
-    //  pesp_conn->proto.tcp->remote_ip[1],
-    //  pesp_conn->proto.tcp->remote_ip[2],
-    //  pesp_conn->proto.tcp->remote_ip[3]
-    //  ,pesp_conn->proto.tcp->remote_port,
-    //  length);
     receive_bytes_count += length;
-    command_parcer_parce(&command_parcer, pusrdata, length, parce_handler, arg);
+    Userdata data = {arg, data_send};
+    command_parcer_parce(&command_parcer, pusrdata, length, (parce_res_handler)process_commands, &data);
 }
 
 /******************************************************************************
@@ -147,5 +122,4 @@ user_webserver_init(uint32 port)
         os_printf("espconn_accept port:%u res:%d\n", port, res);
     #endif
     espconn_regist_time(&esp_conn, 60*60, 0);
- 
 }
