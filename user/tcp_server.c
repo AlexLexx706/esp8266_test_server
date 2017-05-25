@@ -2,9 +2,10 @@
 #include "user_interface.h"
 #include "espconn.h"
 #include "osapi.h"
+#include "command_parcer.h"
 
 uint32 receive_bytes_count = 0;
-
+CommandParcer command_parcer;
 /******************************************************************************
  * FunctionName : data_send
  * Description  : processing the data as http format and send to the client or server
@@ -25,6 +26,20 @@ data_send(void *arg, char *psend)
 }
 
 
+LOCAL void ICACHE_FLASH_ATTR
+parce_handler(CommandParcer * parcer, enum CommandParcerError error, void * user_data) {
+    char buffer[128];
+    os_sprintf(buffer,
+        "prefix:%s cmd:%s param:%s value:%s error:%d\n",
+            parcer->prefix,
+            parcer->cmd,
+            parcer->param,
+            parcer->value,
+            error);
+    data_send(user_data, buffer);
+}
+
+
 /******************************************************************************
  * FunctionName : webserver_recv
  * Description  : Processing the received data from the server
@@ -36,6 +51,12 @@ data_send(void *arg, char *psend)
 LOCAL void ICACHE_FLASH_ATTR
 webserver_recv(void *arg, char *pusrdata, unsigned short length)
 {
+    int i;
+    for (i = 0; i < length; i++) {
+        os_printf("%c", pusrdata[i]);
+    }
+    os_printf("\n", pusrdata[i]);
+
     struct espconn *pesp_conn = arg;
     // os_printf("webserver's %d.%d.%d.%d:%d receive data_len: %u\n",
     //  pesp_conn->proto.tcp->remote_ip[0],
@@ -45,7 +66,7 @@ webserver_recv(void *arg, char *pusrdata, unsigned short length)
     //  ,pesp_conn->proto.tcp->remote_port,
     //  length);
     receive_bytes_count += length;
-    data_send(arg, "ok\n");
+    command_parcer_parce(&command_parcer, pusrdata, length, parce_handler, arg);
 }
 
 /******************************************************************************
@@ -108,8 +129,10 @@ user_webserver_init(uint32 port)
     LOCAL struct espconn esp_conn;
     LOCAL esp_tcp esptcp;
     sint8 res;
+    command_parcer_init(&command_parcer);
 
     esp_conn.type = ESPCONN_TCP;
+    //esp_conn.type = ESPCONN_UDP;
     esp_conn.state = ESPCONN_NONE;
     esp_conn.proto.tcp = &esptcp;
     esp_conn.proto.tcp->local_port = port;
@@ -118,9 +141,11 @@ user_webserver_init(uint32 port)
 
     #ifdef SERVER_SSL_ENABLE
         res = espconn_secure_accept(&esp_conn);
-        os_printf("espconn_secure_accept port:%u res:%d\n", port, res);
+         os_printf("espconn_secure_accept port:%u res:%d\n", port, res);
     #else
         res = espconn_accept(&esp_conn);
         os_printf("espconn_accept port:%u res:%d\n", port, res);
     #endif
+    espconn_regist_time(&esp_conn, 60*60, 0);
+ 
 }
