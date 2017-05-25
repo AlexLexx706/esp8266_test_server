@@ -26,8 +26,6 @@ data_send(void *arg, char *psend)
 }
 
 
-
-
 /******************************************************************************
  * FunctionName : webserver_recv
  * Description  : Processing the received data from the server
@@ -55,41 +53,9 @@ void webserver_recon(void *arg, sint8 err)
 {
     struct espconn *pesp_conn = arg;
 
-    os_printf("webserver's %d.%d.%d.%d:%d err %d reconnect\n", pesp_conn->proto.tcp->remote_ip[0],
-        pesp_conn->proto.tcp->remote_ip[1],pesp_conn->proto.tcp->remote_ip[2],
-        pesp_conn->proto.tcp->remote_ip[3],pesp_conn->proto.tcp->remote_port, err);
-}
-
-/******************************************************************************
- * FunctionName : webserver_recon
- * Description  : the connection has been err, reconnection
- * Parameters   : arg -- Additional argument to pass to the callback function
- * Returns      : none
-*******************************************************************************/
-LOCAL ICACHE_FLASH_ATTR
-void webserver_discon(void *arg)
-{
-    struct espconn *pesp_conn = arg;
-
-    os_printf("webserver's %d.%d.%d.%d:%d disconnect\n", pesp_conn->proto.tcp->remote_ip[0],
-            pesp_conn->proto.tcp->remote_ip[1],pesp_conn->proto.tcp->remote_ip[2],
-            pesp_conn->proto.tcp->remote_ip[3],pesp_conn->proto.tcp->remote_port);
-}
-
-/******************************************************************************
- * FunctionName : user_accept_listen
- * Description  : server listened a connection successfully
- * Parameters   : arg -- Additional argument to pass to the callback function
- * Returns      : none
-*******************************************************************************/
-LOCAL void ICACHE_FLASH_ATTR
-webserver_listen(void *arg)
-{
-    struct espconn *pesp_conn = arg;
-
-    espconn_regist_recvcb(pesp_conn, webserver_recv);
-    espconn_regist_reconcb(pesp_conn, webserver_recon);
-    espconn_regist_disconcb(pesp_conn, webserver_discon);
+    os_printf("webserver's %d.%d.%d.%d:%d err %d reconnect\n", pesp_conn->proto.udp->remote_ip[0],
+        pesp_conn->proto.udp->remote_ip[1],pesp_conn->proto.udp->remote_ip[2],
+        pesp_conn->proto.udp->remote_ip[3],pesp_conn->proto.udp->remote_port, err);
 }
 
 /******************************************************************************
@@ -99,27 +65,19 @@ webserver_listen(void *arg)
  * Returns      : none
 *******************************************************************************/
 void ICACHE_FLASH_ATTR
-user_webserver_init__(uint32 port)
+user_webserver_init(uint32 port)
 {
     LOCAL struct espconn esp_conn;
-    LOCAL esp_tcp esptcp;
+    //LOCAL esp_tcp esptcp;
+    LOCAL esp_udp espudp;
     sint8 res;
     command_parcer_init(&command_parcer);
 
-    esp_conn.type = ESPCONN_TCP;
-    //esp_conn.type = ESPCONN_UDP;
+    //esp_conn.type = ESPCONN_TCP;
+    esp_conn.type = ESPCONN_UDP;
     esp_conn.state = ESPCONN_NONE;
-    esp_conn.proto.tcp = &esptcp;
-    esp_conn.proto.tcp->local_port = port;
-    res = espconn_regist_connectcb(&esp_conn, webserver_listen);
-    os_printf("espconn_regist_connectcb res:%d\n", res);
-
-    #ifdef SERVER_SSL_ENABLE
-        res = espconn_secure_accept(&esp_conn);
-         os_printf("espconn_secure_accept port:%u res:%d\n", port, res);
-    #else
-        res = espconn_accept(&esp_conn);
-        os_printf("espconn_accept port:%u res:%d\n", port, res);
-    #endif
-    espconn_regist_time(&esp_conn, 60*60, 0);
+    esp_conn.proto.udp = &espudp;
+    esp_conn.proto.udp->local_port = port;
+    espconn_create(&esp_conn);
+    espconn_regist_recvcb(&esp_conn, webserver_recv);
 }
