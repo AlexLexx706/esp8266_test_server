@@ -42,41 +42,41 @@ void command_parcer_parce(CommandParcer * parcer, const char * data, int data_si
 	assert(handler);
 	int i;
 
-	#ifdef TEST
+	#ifdef TEST_PRINT
 	fprintf(stderr, "command_parcer_parce data:%s data_size:%d\n", data, data_size);
 	#endif
 	const char * data_end = &data[data_size]; 
 
 	//[%prefix%][name[,parameter][,value][:option]]<eoc>
 	while (data < data_end) {
-		#ifdef TEST
+		#ifdef TEST_PRINT
 		fprintf(stderr, "command_parcer_parce char:%c\n", *data);
 		#endif
 
 		//end
 		if (*data == '\r') {
-			#ifdef TEST
+			#ifdef TEST_PRINT
 			fprintf(stderr, "command_parcer_parce 1\n");
 			#endif
 			switch (parcer->state) {
 				case ReadParamSplitter:
 				case ReadParamState:
 				case ReadDataState:
-					#ifdef TEST
+					#ifdef TEST_PRINT
 					fprintf(stderr, "command_parcer_parce 2\n");
 					#endif
 
 					complete_parce(parcer, handler, 1);
 					break;
 				case BeginParceState:
-					#ifdef TEST
+					#ifdef TEST_PRINT
 					fprintf(stderr, "command_parcer_parce 3\n");
 					#endif
 
 					complete_parce(parcer, handler, parcer->pos_prefix != parcer->prefix);
 					break;
 				default:
-					#ifdef TEST
+					#ifdef TEST_PRINT
 					fprintf(stderr, "command_parcer_parce 4\n");
 					#endif
 
@@ -86,7 +86,7 @@ void command_parcer_parce(CommandParcer * parcer, const char * data, int data_si
 
 		switch (parcer->state) {
 			case BeginParceState:
-				#ifdef TEST
+				#ifdef TEST_PRINT
 				fprintf(stderr, "command_parcer_parce BeginParceState\n");
 				#endif
 
@@ -105,7 +105,7 @@ void command_parcer_parce(CommandParcer * parcer, const char * data, int data_si
 				}
 				break;
 			case ReadPrefixState:
-				#ifdef TEST
+				#ifdef TEST_PRINT
 				fprintf(stderr, "command_parcer_parce ReadPrefixState\n");
 				#endif
 				switch (*data) {
@@ -121,7 +121,7 @@ void command_parcer_parce(CommandParcer * parcer, const char * data, int data_si
 				}
 				break;
 			case ReadCmdState:
-				#ifdef TEST
+				#ifdef TEST_PRINT
 				fprintf(stderr, "command_parcer_parce ReadCmdState\n");
 				#endif
 				if (parcer->pos_cmd == &parcer->cmd[sizeof(parcer->cmd)]){
@@ -143,7 +143,7 @@ void command_parcer_parce(CommandParcer * parcer, const char * data, int data_si
 				}
 				break;
 			case ReadParamSplitter:
-				#ifdef TEST
+				#ifdef TEST_PRINT
 				fprintf(stderr, "command_parcer_parce ReadParamSplitter\n");
 				#endif
 				if (*data != ','){
@@ -152,7 +152,7 @@ void command_parcer_parce(CommandParcer * parcer, const char * data, int data_si
 					parcer->state = ReadParamState;
 				break;
 			case ReadParamState:
-				#ifdef TEST
+				#ifdef TEST_PRINT
 				fprintf(stderr, "command_parcer_parce ReadParamState\n");
 				#endif
 
@@ -166,7 +166,7 @@ void command_parcer_parce(CommandParcer * parcer, const char * data, int data_si
 				}
 				break;
 			case ReadDataState:
-				#ifdef TEST
+				#ifdef TEST_PRINT
 				fprintf(stderr, "command_parcer_parce ReadDataState\n");
 				#endif
 
@@ -185,19 +185,24 @@ void command_parcer_parce(CommandParcer * parcer, const char * data, int data_si
 int main() {
 	CommandParcer parcer;
 	command_parcer_init(&parcer);
-	//char * test_str[] = {"123123", "%12%", "%sdsd", "%%en", "%set", "print,", "set,xx/sd,23"};
-	char * test_str[] = {"%abc%set,xx/sd,23\r"};
+	char * test_str[] = {"123123\r", "%12%\r", "%sdsd\r", "%%en\r", "%set\r", "print,\r", "set,xx/sd,23\r"};
+	//char * test_str[] = {"%abc%set,xx/sd,23\r"};
 	int i;
 
 	void parce_handler(CommandParcer * parcer, int is_ok) {
-		fprintf(stderr, "parce_handler res:%d prefix:%s, param:%s, value:%s\n",
-			is_ok,
+		fprintf(stderr, "parce_handler prefix:%s, cmd:%s param:%s, value:%s res:%d \n",
 			parcer->prefix,
+			parcer->cmd,
 			parcer->param,
-			parcer->value);
+			parcer->value,
+			is_ok);
 	}
 
 	for (i=0; i < sizeof(test_str)/sizeof(char *); i++) {
+		char tmp[50];
+		strcpy(tmp, test_str[i]);
+		tmp[strlen(tmp) - 1] = 0;
+		fprintf(stderr, "test str:%s\n", tmp);
 		command_parcer_parce(&parcer, test_str[i], strlen(test_str[i]), parce_handler);	
 	}
 	return 0;
