@@ -65,22 +65,23 @@ void command_parcer_parce(CommandParcer * parcer, const char * data, int data_si
 					#ifdef TEST_PRINT
 					fprintf(stderr, "command_parcer_parce 2\n");
 					#endif
-
-					complete_parce(parcer, handler, 1);
+					complete_parce(parcer, handler, CommandParcerNoError);
 					break;
 				case BeginParceState:
 					#ifdef TEST_PRINT
 					fprintf(stderr, "command_parcer_parce 3\n");
 					#endif
 
-					complete_parce(parcer, handler, parcer->pos_prefix != parcer->prefix);
+					complete_parce(
+						parcer, handler,
+						parcer->pos_prefix == parcer->prefix ? CommandParcerErrorNotComplete : CommandParcerNoError);
 					break;
 				default:
 					#ifdef TEST_PRINT
 					fprintf(stderr, "command_parcer_parce 4\n");
 					#endif
 
-					complete_parce(parcer, handler, 0);
+					complete_parce(parcer, handler, CommandParcerErrorNotComplete);
 			}
 		}
 
@@ -114,7 +115,7 @@ void command_parcer_parce(CommandParcer * parcer, const char * data, int data_si
 						break;
 					default:
 						if (parcer->pos_prefix == &parcer->prefix[sizeof(parcer->prefix)]) {
-							complete_parce(parcer, handler, 0);
+							complete_parce(parcer, handler, CommandParcerErrorPrefixTooLong);
 						} else
 							*(parcer->pos_prefix++) = *data;
 						break;
@@ -125,7 +126,7 @@ void command_parcer_parce(CommandParcer * parcer, const char * data, int data_si
 				fprintf(stderr, "command_parcer_parce ReadCmdState\n");
 				#endif
 				if (parcer->pos_cmd == &parcer->cmd[sizeof(parcer->cmd)]){
-					complete_parce(parcer, handler, 0);
+					complete_parce(parcer, handler, CommandParcerErrorCmdTooLong);
 				} else {
 					*(parcer->pos_cmd++) = *data;
 					int has_cmd = 0;
@@ -139,7 +140,7 @@ void command_parcer_parce(CommandParcer * parcer, const char * data, int data_si
 						}
 					}
 					if (!has_cmd)
-						complete_parce(parcer, handler, 0);
+						complete_parce(parcer, handler, CommandParcerErrorUnknownCmd);
 				}
 				break;
 			case ReadParamSplitter:
@@ -147,7 +148,7 @@ void command_parcer_parce(CommandParcer * parcer, const char * data, int data_si
 				fprintf(stderr, "command_parcer_parce ReadParamSplitter\n");
 				#endif
 				if (*data != ','){
-					complete_parce(parcer, handler, 0);
+					complete_parce(parcer, handler, CommandParcerErrorWnongParamSplitter);
 				} else
 					parcer->state = ReadParamState;
 				break;
@@ -157,7 +158,7 @@ void command_parcer_parce(CommandParcer * parcer, const char * data, int data_si
 				#endif
 
 				if (parcer->pos_param == &parcer->param[sizeof(parcer->param)]) {
-					complete_parce(parcer, handler, 0);
+					complete_parce(parcer, handler, CommandParcerErrorParamTooLong);
 				} else {
 					if (*data == ',')
 						parcer->state = ReadDataState;
@@ -171,7 +172,7 @@ void command_parcer_parce(CommandParcer * parcer, const char * data, int data_si
 				#endif
 
 				if (parcer->pos_value == &parcer->value[sizeof(parcer->value)]) {
-					complete_parce(parcer, handler, 0);
+					complete_parce(parcer, handler, CommandParcerErrorDataTooLong);
 				} else
 					*(parcer->pos_value++) = *data;
 				break;
@@ -188,14 +189,26 @@ int main() {
 	char * test_str[] = {"123123\r", "%12%\r", "%sdsd\r", "%%en\r", "%set\r", "print,\r", "set,xx/sd,23\r"};
 	//char * test_str[] = {"%abc%set,xx/sd,23\r"};
 	int i;
+	static const char * errr_descs[] = {
+	    "CommandParcerNoError",
+	    "CommandParcerErrorPrefixNotComplete",
+	    "CommandParcerErrorPrefixTooLong",
+	    "CommandParcerErrorNotComplete",
+	    "CommandParcerErrorCmdTooLong",
+	    "CommandParcerErrorUnknownCmd",
+	    "CommandParcerErrorWnongParamSplitter",
+	    "CommandParcerErrorParamTooLong",
+	    "CommandParcerErrorDataTooLong"
+	};
 
-	void parce_handler(CommandParcer * parcer, int is_ok) {
-		fprintf(stderr, "parce_handler prefix:%s, cmd:%s param:%s, value:%s res:%d \n",
+	void parce_handler(CommandParcer * parcer, enum CommandParcerError error) {
+		fprintf(stderr, "parce_handler prefix:%s, cmd:%s param:%s, value:%s error:%d errr_descs: %s\n",
 			parcer->prefix,
 			parcer->cmd,
 			parcer->param,
 			parcer->value,
-			is_ok);
+			error,
+			errr_descs[error]);
 	}
 
 	for (i=0; i < sizeof(test_str)/sizeof(char *); i++) {

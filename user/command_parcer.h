@@ -2,12 +2,24 @@
 #define _COMMAND_PARCER_H_
 
 enum CommandParcerState {
-    BeginParceState,
+    BeginParceState = 0,
     ReadPrefixState,
     ReadCmdState,
     ReadParamSplitter,
     ReadParamState,
     ReadDataState,
+};
+
+enum CommandParcerError {
+    CommandParcerNoError = 0,
+    CommandParcerErrorPrefixNotComplete,
+    CommandParcerErrorPrefixTooLong,
+    CommandParcerErrorNotComplete,
+    CommandParcerErrorCmdTooLong,
+    CommandParcerErrorUnknownCmd,
+    CommandParcerErrorWnongParamSplitter,
+    CommandParcerErrorParamTooLong,
+    CommandParcerErrorDataTooLong
 };
 
 typedef struct CommandParcer {
@@ -16,7 +28,6 @@ typedef struct CommandParcer {
     char cmd[10];
     char param[20];
     char value[20];
-    int is_ok;
 
     char * pos_prefix;
     char * pos_cmd;
@@ -24,7 +35,7 @@ typedef struct CommandParcer {
     char * pos_value;
 } CommandParcer;
 
-typedef void (*parce_res_handler)(CommandParcer * parcer, int is_ok);
+typedef void (*parce_res_handler)(CommandParcer * parcer, enum CommandParcerError error);
 
 void command_parcer_init(CommandParcer * parcer);
 void command_parcer_parce(CommandParcer * parcer, const char * data, int data_size, parce_res_handler handler);
