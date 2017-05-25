@@ -1,6 +1,14 @@
 #include "command_parcer.h"
 #include <assert.h>
 
+//extern int os_strncmp(const char * str1, const char * str2, int len);
+#ifdef TEST
+	#include <string.h>
+	#include <stdio.h>
+	#define os_strncmp(str1, str2, len)\
+		strncmp(str1, str2, len)
+#endif
+
 void command_parcer_init(CommandParcer * parcer) {
 	assert(parcer);
 	parcer->state = BeginParceState;
@@ -26,45 +34,80 @@ static void complete_parce(CommandParcer * parcer, parce_res_handler handler, in
 	command_parcer_init(parcer);
 }
 
+static const char * commands_names[] = {"print", "set", "en", "de"};   
+
 void command_parcer_parce(CommandParcer * parcer, const char * data, int data_size, parce_res_handler handler) {
 	assert(parcer);
 	assert(data);
 	assert(handler);
-	
+	int i;
+
+	#ifdef TEST
+	fprintf(stderr, "command_parcer_parce data:%s data_size:%d\n", data, data_size);
+	#endif
+	const char * data_end = &data[data_size]; 
+
 	//[%prefix%][name[,parameter][,value][:option]]<eoc>
-	while (data != &data[data_size]) {
+	while (data < data_end) {
+		#ifdef TEST
+		fprintf(stderr, "command_parcer_parce char:%c\n", *data);
+		#endif
+
 		//end
 		if (*data == '\r') {
+			#ifdef TEST
+			fprintf(stderr, "command_parcer_parce 1\n");
+			#endif
 			switch (parcer->state) {
 				case ReadParamSplitter:
 				case ReadParamState:
 				case ReadDataState:
+					#ifdef TEST
+					fprintf(stderr, "command_parcer_parce 2\n");
+					#endif
+
 					complete_parce(parcer, handler, 1);
 					break;
 				case BeginParceState:
+					#ifdef TEST
+					fprintf(stderr, "command_parcer_parce 3\n");
+					#endif
+
 					complete_parce(parcer, handler, parcer->pos_prefix != parcer->prefix);
 					break;
 				default:
+					#ifdef TEST
+					fprintf(stderr, "command_parcer_parce 4\n");
+					#endif
+
 					complete_parce(parcer, handler, 0);
 			}
 		}
 
 		switch (parcer->state) {
-			BeginParceState:
+			case BeginParceState:
+				#ifdef TEST
+				fprintf(stderr, "command_parcer_parce BeginParceState\n");
+				#endif
+
 				switch (*data) {
 					case '%':
 						parcer->state = ReadPrefixState;
 						break;
-					case 's':
-					case 'p':
-					case 'e':
-					case 'd':
-						parcer->state = ReadCmdState;
-						*(parcer->pos_cmd++) = *data;
-						break;
+					default:
+						for (i = 0; i < sizeof(commands_names)/sizeof(commands_names[0]); i++) {
+							if (commands_names[i][0] == *data) {
+								parcer->state = ReadCmdState;
+								*(parcer->pos_cmd++) = *data;
+								break;
+							}
+						}
 				}
 				break;
-			ReadPrefixState:
+			case ReadPrefixState:
+				#ifdef TEST
+				fprintf(stderr, "command_parcer_parce ReadPrefixState\n");
+				#endif
 				switch (*data) {
 					case '%':
 						parcer->state = BeginParceState;
@@ -77,46 +120,86 @@ void command_parcer_parce(CommandParcer * parcer, const char * data, int data_si
 						break;
 				}
 				break;
-			ReadCmdState:
+			case ReadCmdState:
+				#ifdef TEST
+				fprintf(stderr, "command_parcer_parce ReadCmdState\n");
+				#endif
 				if (parcer->pos_cmd == &parcer->cmd[sizeof(parcer->cmd)]){
 					complete_parce(parcer, handler, 0);
 				} else {
 					*(parcer->pos_cmd++) = *data;
-					
-					if (!os_strncmp(parcer->cmd, "print", parcer->pos_cmd - parcer->cmd) || 
-						!os_strncmp(parcer->cmd, "set", parcer->pos_cmd - parcer->cmd) ||
-						!os_strncmp(parcer->cmd, "en", parcer->pos_cmd - parcer->cmd) ||
-						!os_strncmp(parcer->cmd, "de", parcer->pos_cmd - parcer->cmd)) {
-						parcer->state = ReadParamSplitter;
-					} else {
-						complete_parce(parcer, handler, 0);
+					int has_cmd = 0;
+					for (i = 0; i < sizeof(commands_names)/sizeof(commands_names[0]); i++) {
+						if (!os_strncmp(parcer->cmd, commands_names[i], parcer->pos_cmd - parcer->cmd)) {
+							if (parcer->pos_cmd - parcer->cmd == strlen(commands_names[i])) {
+								parcer->state = ReadParamSplitter;
+							}
+							has_cmd = 1;
+							break;
+						}
 					}
+					if (!has_cmd)
+						complete_parce(parcer, handler, 0);
 				}
 				break;
-			ReadParamSplitter:
+			case ReadParamSplitter:
+				#ifdef TEST
+				fprintf(stderr, "command_parcer_parce ReadParamSplitter\n");
+				#endif
 				if (*data != ','){
 					complete_parce(parcer, handler, 0);
 				} else
 					parcer->state = ReadParamState;
-					parcer->pos_param = parcer->param;
 				break;
-			ReadParamState:
+			case ReadParamState:
+				#ifdef TEST
+				fprintf(stderr, "command_parcer_parce ReadParamState\n");
+				#endif
+
 				if (parcer->pos_param == &parcer->param[sizeof(parcer->param)]) {
 					complete_parce(parcer, handler, 0);
 				} else {
-					*(parcer->pos_param++) = *data;
-					
 					if (*data == ',')
 						parcer->state = ReadDataState;
+					else
+						*(parcer->pos_param++) = *data;
 				}
 				break;
-			ReadDataState:
+			case ReadDataState:
+				#ifdef TEST
+				fprintf(stderr, "command_parcer_parce ReadDataState\n");
+				#endif
+
 				if (parcer->pos_value == &parcer->value[sizeof(parcer->value)]) {
 					complete_parce(parcer, handler, 0);
 				} else
-					*(parcer->pos_param++) = *data;
+					*(parcer->pos_value++) = *data;
 				break;
 		}
 		data++;
 	}
 }
+
+
+#ifdef TEST
+int main() {
+	CommandParcer parcer;
+	command_parcer_init(&parcer);
+	//char * test_str[] = {"123123", "%12%", "%sdsd", "%%en", "%set", "print,", "set,xx/sd,23"};
+	char * test_str[] = {"%abc%set,xx/sd,23\r"};
+	int i;
+
+	void parce_handler(CommandParcer * parcer, int is_ok) {
+		fprintf(stderr, "parce_handler res:%d prefix:%s, param:%s, value:%s\n",
+			is_ok,
+			parcer->prefix,
+			parcer->param,
+			parcer->value);
+	}
+
+	for (i=0; i < sizeof(test_str)/sizeof(char *); i++) {
+		command_parcer_parce(&parcer, test_str[i], strlen(test_str[i]), parce_handler);	
+	}
+	return 0;
+}
+#endif
