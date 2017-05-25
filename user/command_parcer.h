@@ -38,6 +38,8 @@ typedef struct CommandParcer {
 typedef void (*parce_res_handler)(CommandParcer * parcer, enum CommandParcerError error);
 
 void command_parcer_init(CommandParcer * parcer);
+
+//parse byte stream, search this template: [%prefix%][name[,parameter][,value][:option]]<eoc>
 void command_parcer_parce(CommandParcer * parcer, const char * data, int data_size, parce_res_handler handler);
 
 #endif //_COMMAND_PARCER_H_
