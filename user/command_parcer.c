@@ -41,9 +41,11 @@ void command_parcer_parce(CommandParcer * parcer, const char * data, int data_si
 				case ReadDataState:
 					complete_parce(parcer, handler, 1);
 					break;
+				case BeginParceState:
+					complete_parce(parcer, handler, parcer->pos_prefix != parcer->prefix);
+					break;
 				default:
 					complete_parce(parcer, handler, 0);
-					break;
 			}
 		}
 
