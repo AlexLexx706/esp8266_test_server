@@ -1,6 +1,6 @@
 #ifndef CONTROLLER_H
 #define CONTROLLER_H
-#include "command_parcer.h"
+#include "gril_stream_cmd_parcer.h"
 
 typedef struct Userdata {
     void * socket;
@@ -8,5 +8,11 @@ typedef struct Userdata {
 
 } Userdata;
 
-void process_commands(CommandParcer * parcer, enum CommandParcerError error, Userdata * user_data);
+void process_commands(
+    enum GrilStreamCmdParcerError error,
+    const char * prefix,
+    const char * cmd,
+    const char * param,
+    const char * value,
+    void * user_data);
 #endif

@@ -43,25 +43,27 @@ webserver_recv(void *arg, char *pusrdata, unsigned short length)
 }
 
 
+
+
 /******************************************************************************
  * FunctionName : user_webserver_init
  * Description  : parameter initialize as a server
  * Parameters   : port -- server port
  * Returns      : none
 *******************************************************************************/
-//void ICACHE_FLASH_ATTR
-
-
-
-
-void user_webserver_init(uint32 port)
+void ICACHE_FLASH_ATTR
+user_webserver_init(uint32 port)
 {
     LOCAL struct espconn esp_conn;
     //LOCAL esp_tcp esptcp;
     LOCAL esp_udp espudp;
     LOCAL GrilCommandNameDesc cmd_names[] = {{"print", 5}, {"set", 3}};
 
-    gril_stream_cmd_parcer_init(&command_parcer, process_commands, cmd_names, 2);
+    gril_stream_cmd_parcer_init(
+        &command_parcer,
+        (parce_res_handler)process_commands,
+        cmd_names,
+        2);
 
     //esp_conn.type = ESPCONN_TCP;
     esp_conn.type = ESPCONN_UDP;
