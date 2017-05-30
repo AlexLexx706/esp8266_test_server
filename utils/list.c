@@ -57,6 +57,21 @@ void main() {
     }
     fprintf(stderr, "count:%d\n", i);
 
+    struct  CmdData
+    {
+    	const char * name;
+        List head;
+    };
+
+	List cmd_head;
+	INIT_LIST(&head);
+
+    struct CmdData data1;
+    struct CmdData data2;
+    list_add_tail(&cmd_head, &data1);
+    list_add_tail(&cmd_head, &data2);
+
+
 }
 
 #endif
