@@ -64,12 +64,16 @@ void main() {
     };
 
 	List cmd_head;
-	INIT_LIST(&head);
+	INIT_LIST(&cmd_head);
 
     struct CmdData data1;
     struct CmdData data2;
     list_add_tail(&cmd_head, &data1);
     list_add_tail(&cmd_head, &data2);
+
+    for (pos = (&cmd_head)->next; pos != (&cmd_head); pos = pos->next) {
+        i++;
+    }
 
 
 }
