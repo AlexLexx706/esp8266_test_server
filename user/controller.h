@@ -41,5 +41,4 @@ void controller_process_commands(
     const char * param,
     const char * value,
     void * user_data);
-
 #endif

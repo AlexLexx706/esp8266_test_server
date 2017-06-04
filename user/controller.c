@@ -51,7 +51,7 @@ root_set(struct GrilTreeItem_T * item, const char * value) {
 
 enum GrilStreamCmdParcerError ICACHE_FLASH_ATTR
 root_print(struct GrilTreeItem_T * item, char * out_buffer, int out_buffer_size) {
-	os_sprintf(out_buffer, "root\n");
+	os_sprintf(out_buffer, "root data:alloha!!!");
 	return GrilStreamCmdParcerNoError;
 }
 
@@ -93,6 +93,26 @@ find_gril_tree_item(GrilTreeItem * head_item, const char * path) {
 	}
 }
 
+LOCAL void ICACHE_FLASH_ATTR controller_send_res(
+		Userdata * user_data,
+		enum GrilStreamCmdParcerError error,
+		const char * prefix,
+		const char * res_buffer) {
+	int len = os_strlen(prefix) + 2;
+	char out_buffer[120];
+
+	if (error == GrilStreamCmdParcerNoError) {
+		len += os_strlen(res_buffer);
+		os_sprintf(out_buffer, "RE%03X%%%s%%%s\n", len, prefix, res_buffer);
+		user_data->send_data(user_data->socket, out_buffer);
+	} else {
+		char error_buffer[32];
+		os_sprintf(error_buffer, "error:%d", GrilStreamCmdParcerNoError);
+		len += os_strlen(error_buffer);
+		os_sprintf(out_buffer, "ER%03X%%%s%%%s\n", len, prefix, res_buffer);
+		user_data->send_data(user_data->socket, out_buffer);
+	}
+}
 
 void ICACHE_FLASH_ATTR
 controller_process_commands(
@@ -103,7 +123,7 @@ controller_process_commands(
 		const char * value,
 		void * _user_data) {
 	assert(root_gril_item != NULL);
-	char buffer[128];
+	char buffer[56]= {0};
 	Userdata * user_data = (Userdata *)(_user_data);
 
 	#ifdef DEBUG_CONTROLLER
@@ -112,42 +132,32 @@ controller_process_commands(
 	#endif
 
 	if (error == GrilStreamCmdParcerNoError) {
-		#ifdef DEBUG_CONTROLLER
-		fprintf(stderr, "%s 1\n", __FUNCTION__);
-		#endif
+		int path_len = os_strlen(path);
 
-		GrilTreeItem * item = find_gril_tree_item(
-			root_gril_item,
-			path[0] == '/' ? &path[1]: path);
+		if (path_len > 0) {
+			GrilTreeItem * item = (path_len == 1 && path[0] == '/') ?
+				root_gril_item : find_gril_tree_item(
+					root_gril_item, path[0] == '/' ? &path[1]: path); 
 
-		if (item) {
-			if (!os_strcmp(cmd, "set") && item->fun_set) {
-				error = item->fun_set(item, value);
-			} else if (!os_strcmp(cmd, "print") && item->fun_print) {
-				error = item->fun_print(item, buffer, sizeof(buffer));
+			if (item) {
+				#ifdef DEBUG_CONTROLLER
+				fprintf(stderr, "%s find item:%s\n",
+					__FUNCTION__, item->name);
+				#endif
+
+				if (!os_strcmp(cmd, "set") && item->fun_set) {
+					error = item->fun_set(item, value);
+				} else if (!os_strcmp(cmd, "print") && item->fun_print) {
+					error = item->fun_print(item, buffer, sizeof(buffer));
+				} else {
+					error = GrilStreamCmdParcerErrorUnknownCmd;
+				}
 			} else {
-				error = GrilStreamCmdParcerErrorUnknownCmd;
+				error = GrilStreamCmdParcerErrorWrongParam;
 			}
-		} else {
-			error = GrilStreamCmdParcerErrorWrongParam;
 		}
 	}
-	#ifdef DEBUG_CONTROLLER
-	fprintf(stderr, "%s 2\n", __FUNCTION__);
-	#endif
-
-	if (error != GrilStreamCmdParcerNoError) {
-		#ifdef DEBUG_CONTROLLER
-		fprintf(stderr, "%s 3\n", __FUNCTION__);
-		#endif
-
-		os_sprintf(buffer, "errno:%d\n",error);
-	}
-	#ifdef DEBUG_CONTROLLER
-	fprintf(stderr, "%s 4\n", __FUNCTION__);
-	#endif
-
-	user_data->send_data(user_data->socket, buffer);
+	controller_send_res(user_data, error, prefix, buffer);
 }
 
 
@@ -162,7 +172,7 @@ int main() {
 	GrilStreamCmdParcer parcer;
 	GrilCommandNameDesc cmd_names[] = {{"print", 5}, {"set", 3}};
 	Userdata user_data = {0, send_data};
-	char test_date[] = "%%set,/light,on\n";
+	char test_date[] = "%%print,/,on\npri\nset,/,12\n%12%\n";
 
 	controller_init(&root_gril);
 	gril_stream_cmd_parcer_init(&parcer, controller_process_commands, cmd_names, 2);
