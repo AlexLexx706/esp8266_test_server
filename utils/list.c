@@ -30,11 +30,11 @@ int list_remove(List * item) {
 }
 
 
-#ifdef TEST
+#ifdef LIST_TEST
 
 void main() {
 	List head;
-	INIT_LIST(&head);
+	LIST_INIT(&head);
 	List item1;
 	List item2;
 	List item3;
@@ -63,7 +63,7 @@ void main() {
 	} __attribute__ ((packed)) CmdData;
 
 	List cmd_head;
-	INIT_LIST(&cmd_head);
+	LIST_INIT(&cmd_head);
 
 	CmdData data1 = {"1",};
 	CmdData data2 = {"2",};
@@ -73,8 +73,8 @@ void main() {
 	list_add_tail(&cmd_head, &data1.head);
 	list_add_tail(&cmd_head, &data2.head);
 
-	for (pos = (&cmd_head)->next; pos != (&cmd_head); pos = pos->next) {
-		CmdData * item = LIST_TO_ITEM(CmdData, head, pos);
+	LIST_ITER(cmd_head) {
+		CmdData * item = LIST_ITEM(CmdData, head, pos);
 		fprintf(stderr, "name:%s\n", item->name);
 	}
 

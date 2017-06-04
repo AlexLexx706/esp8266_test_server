@@ -2,7 +2,7 @@
 #include <assert.h>
 
 //extern int os_strncmp(const char * str1, const char * str2, int len);
-#ifndef TEST
+#if !defined(TEST) && !defined(TEST_CONTROLLER)
 	#include <osapi.h>
 	#include <c_types.h>
 #else
@@ -69,6 +69,18 @@ complete_parce(GrilStreamCmdParcer * parcer, enum GrilStreamCmdParcerError error
 	*parcer->pos_cmd = 0;
 	*parcer->pos_param = 0;
 	*parcer->pos_value = 0;
+
+	#ifdef TEST_PRINT
+	fprintf(stderr, "%s error:%d prefix:%s cmd:%s path:%s value:%s handler:%p\n",
+		__FUNCTION__,
+		error,
+		parcer->prefix,
+		parcer->cmd,
+		parcer->param,
+		parcer->value,
+		parcer->handler);
+	#endif
+
 	parcer->handler(error, parcer->prefix, parcer->cmd, parcer->param, parcer->value, user_data);
 	gril_stream_cmd_parcer_reinit(parcer);
 }

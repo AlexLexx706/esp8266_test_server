@@ -61,7 +61,7 @@ user_webserver_init(uint32 port)
 
     gril_stream_cmd_parcer_init(
         &command_parcer,
-        (parce_res_handler)process_commands,
+        (parce_res_handler)controller_process_commands,
         cmd_names,
         2);
 

@@ -6,13 +6,14 @@
 	} List;
 
 	//init list head
-	#define INIT_LIST(head)\
+	#define LIST_INIT(head)\
 		(head)->next = (head);\
 		(head)->prev = (head);
 
 	//return pointr to item 
-	#define LIST_TO_ITEM(ItemType, head_member, pos) ((ItemType *)((void *)pos - (void *)(&((ItemType *)0)->head_member)))
+	#define LIST_ITEM(ItemType, head_member, pos) ((ItemType *)((char *)pos - (char *)(&((ItemType *)0)->head_member)))
 
+	#define LIST_ITER(head) for (pos = (head)->next; pos != (head); pos = pos->next)
 	//add list item to tail of list
 	void list_add_tail(List * head, List * item);
 

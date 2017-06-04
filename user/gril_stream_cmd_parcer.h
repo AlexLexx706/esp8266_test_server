@@ -13,7 +13,8 @@ enum GrilStreamCmdParcerError {
 	GrilStreamCmdParcerErrorUnknownCmd,
 	GrilStreamCmdParcerErrorWnongParamSplitter,
 	GrilStreamCmdParcerErrorParamTooLong,
-	GrilStreamCmdParcerErrorDataTooLong
+	GrilStreamCmdParcerErrorDataTooLong,
+	GrilStreamCmdParcerErrorWrongParam,
 };
 
 //describe commands wich search by gril stream
