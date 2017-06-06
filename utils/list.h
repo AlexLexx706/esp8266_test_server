@@ -1,3 +1,4 @@
+/** alexlexx 2017 */
 #ifndef LIST_H
 #define LIST_H
 	typedef struct List_t {
