@@ -1,3 +1,4 @@
+/** alexlexx 2017 */
 #ifndef TREE_H
 #define TREE_H
 #include "list.h"
