@@ -1,3 +1,4 @@
+/**alexlexx 2017*/
 #ifndef CONTROLLER_H
 #define CONTROLLER_H
 #include "gril_stream_cmd_parcer.h"
