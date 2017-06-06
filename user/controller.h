@@ -3,8 +3,8 @@
 #include "gril_stream_cmd_parcer.h"
 #include "tree.h"
 
-//User data struct definition
-typedef struct Userdata {
+/**This struct use for send controller result back*/
+typedef struct {
     void * socket;
     void (*send_data)(void *socket, char *string);
 
@@ -33,7 +33,15 @@ typedef struct GrilTreeItem_T
 //init controller;
 void controller_init(GrilTreeItem * root);
 
-//function for process commands
+/**
+	Process data from gril parcer, and return results.
+	params:
+		error - parser result;
+		cmd - cmd string;
+		param - parametr string,
+		value - value string;
+		user_data - use for send result
+*/
 void controller_process_commands(
     enum GrilStreamCmdParcerError error,
     const char * prefix,
