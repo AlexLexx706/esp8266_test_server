@@ -3,6 +3,7 @@
 #define TREE_H
 #include "list.h"
 
+/**definition tree struct*/
 typedef struct Tree_t {
 	struct Tree_t * parent;
 	List child_head;
