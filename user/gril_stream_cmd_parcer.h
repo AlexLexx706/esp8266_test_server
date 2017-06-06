@@ -1,9 +1,10 @@
+/**alexlexx 2017*/
 #ifndef _gril_stream_cmd_parcer_H_
 #define _gril_stream_cmd_parcer_H_
 
 #define GRIL_CMD_COMPLETE_CHAR '\n'
 
-//parcer errors
+//parcer errors enum
 enum GrilStreamCmdParcerError {
 	GrilStreamCmdParcerNoError = 0,
 	GrilStreamCmdParcerErrorPrefixNotComplete,
@@ -17,17 +18,14 @@ enum GrilStreamCmdParcerError {
 	GrilStreamCmdParcerErrorWrongParam,
 };
 
-//describe commands wich search by gril stream
-typedef struct GrilCommandNameDesc_t
-{
+//Strict definition use for describe commands, example: {{"print", 5},{"set", 3}}
+typedef struct GrilCommandNameDesc_t {
 	const char * name;
 	unsigned char name_len;
 } GrilCommandNameDesc;
 
 
-/*
-	Command handler function definition, call when parcer complate search cmd
-**/
+//Command handler function definition, call when parcer complate search cmd
 typedef void (*parce_res_handler)(
 	enum GrilStreamCmdParcerError error,
 	const char * prefix,
