@@ -20,7 +20,7 @@ typedef enum GrilStreamCmdParcerError (*set_gril_item_fun)(
 
 //print gril item fun definition
 typedef enum GrilStreamCmdParcerError (*print_gril_item_fun)(
-	struct GrilTreeItem_T * item, char * out_buffer, int out_buffer_size);
+	struct GrilTreeItem_T * item, char ** out_buffer, const char * out_buffer_end);
 
 //defeine gril item tree node
 typedef struct GrilTreeItem_T 

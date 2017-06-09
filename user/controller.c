@@ -24,7 +24,7 @@ LOCAL enum GrilStreamCmdParcerError root_set(
 	struct GrilTreeItem_T * item, const char * value);
 
 LOCAL enum GrilStreamCmdParcerError print_tree(
-	struct GrilTreeItem_T * item, char * out_buffer, int out_buffer_size);
+	struct GrilTreeItem_T * item, char ** out_buffer, const char * out_buffer_end);
 
 
 void ICACHE_FLASH_ATTR
@@ -50,14 +50,40 @@ root_set(struct GrilTreeItem_T * item, const char * value) {
 }
 
 LOCAL enum GrilStreamCmdParcerError ICACHE_FLASH_ATTR
-print_tree(struct GrilTreeItem_T * item, char * out_buffer, int out_buffer_size) {
+print_tree(struct GrilTreeItem_T * head, char ** out_buffer, const char * out_buffer_end) {
 	assert(item);
 	assert(out_buffer);
 	assert(out_buffer_size);
 	List * pos;
 	GrilTreeItem * item;
+	int str_len;
+	enum GrilStreamCmdParcerError tmp_res;
 
-	
+	//short out buffer
+	if ((*out_buffer) + 1 >= out_buffer_end)
+		return GrilStreamCmdParcerErrorDataTooLong;
+
+	*((*out_buffer)++) = '{';
+
+	LIST_ITER(&(head->tree.child_head)) {
+		item = LIST_ITEM(GrilTreeItem, tree.head, pos);
+		if ((str_len = strlen(item->name)) >= (out_buffer_end - (*out_buffer)))
+			return GrilStreamCmdParcerErrorDataTooLong;
+
+		(*out_buffer) += strcpy((*out_buffer), item->name) + str_len;
+
+		if ((*out_buffer) + 1 >= out_buffer_end)
+			return GrilStreamCmdParcerErrorDataTooLong;
+		((*out_buffer)++) = '=';
+
+		//try print item value to out_buffer
+		if (item->fun_print) {
+			if ((tmp_res = item->fun_print(out_buffer, out_buffer_end)) != GrilStreamCmdParcerNoError)
+				return tmp_res;
+		} else {
+			
+		}
+	}
 	return GrilStreamCmdParcerNoError;
 }
 
