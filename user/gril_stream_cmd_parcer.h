@@ -3,6 +3,10 @@
 #define _gril_stream_cmd_parcer_H_
 
 #define GRIL_CMD_COMPLETE_CHAR '\n'
+#define GRIL_PARCER_PREFIX_LEN 10
+#define GRIL_PARCER_CMD_LEN 10
+#define GRIL_PARCER_PARAMS_LEN 20
+#define GRIL_PARCER_VALUE_LEN 20
 
 //parcer errors enum
 enum GrilStreamCmdParcerError {
@@ -37,10 +41,10 @@ typedef void (*parce_res_handler)(
 //define gril parcer struct
 typedef struct GrilStreamCmdParcer_t {
 	int state;
-	char prefix[10];
-	char cmd[10];
-	char param[20];
-	char value[20];
+	char prefix[GRIL_PARCER_PREFIX_LEN];
+	char cmd[GRIL_PARCER_CMD_LEN];
+	char param[GRIL_PARCER_PARAMS_LEN];
+	char value[GRIL_PARCER_VALUE_LEN];
 
 	char * pos_prefix;
 	char * pos_cmd;

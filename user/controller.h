@@ -31,7 +31,11 @@ typedef struct GrilTreeItem_T
 	Tree tree;
 } GrilTreeItem;
 
-//init controller;
+/**
+ 	Init command controller with root node
+ 	params:
+ 		root - controller tree root none, use for search nodes in tree
+*/
 void controller_init(GrilTreeItem * root);
 
 /**

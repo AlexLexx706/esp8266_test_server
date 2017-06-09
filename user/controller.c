@@ -20,10 +20,10 @@ LOCAL GrilTreeItem * root_gril_item = NULL;
 LOCAL GrilTreeItem * find_gril_tree_item(
 	GrilTreeItem * head_item, const char * path);
 
-enum GrilStreamCmdParcerError root_set(
+LOCAL enum GrilStreamCmdParcerError root_set(
 	struct GrilTreeItem_T * item, const char * value);
 
-enum GrilStreamCmdParcerError root_print(
+LOCAL enum GrilStreamCmdParcerError print_tree(
 	struct GrilTreeItem_T * item, char * out_buffer, int out_buffer_size);
 
 
@@ -38,10 +38,10 @@ controller_init(GrilTreeItem * root) {
 	tree_init(&root->tree);
 	root->name = "/";
 	root->fun_set = root_set;
-	root->fun_print = root_print;
+	root->fun_print = print_tree;
 }
 
-enum GrilStreamCmdParcerError ICACHE_FLASH_ATTR
+LOCAL enum GrilStreamCmdParcerError ICACHE_FLASH_ATTR
 root_set(struct GrilTreeItem_T * item, const char * value) {
 	#ifdef DEBUG_CONTROLLER
 	fprintf(stderr, "%s item->name:%s value:%s\n",  __FUNCTION__, item->name, value);
@@ -49,9 +49,15 @@ root_set(struct GrilTreeItem_T * item, const char * value) {
 	return GrilStreamCmdParcerNoError;
 }
 
-enum GrilStreamCmdParcerError ICACHE_FLASH_ATTR
-root_print(struct GrilTreeItem_T * item, char * out_buffer, int out_buffer_size) {
-	os_sprintf(out_buffer, "root data:alloha!!!");
+LOCAL enum GrilStreamCmdParcerError ICACHE_FLASH_ATTR
+print_tree(struct GrilTreeItem_T * item, char * out_buffer, int out_buffer_size) {
+	assert(item);
+	assert(out_buffer);
+	assert(out_buffer_size);
+	List * pos;
+	GrilTreeItem * item;
+
+	
 	return GrilStreamCmdParcerNoError;
 }
 
