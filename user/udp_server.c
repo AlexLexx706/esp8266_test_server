@@ -5,7 +5,7 @@
 #include "controller.h"
 
 uint32 receive_bytes_count = 0;
-GrilStreamCmdParcer command_parcer;
+GrilStreamParcer command_parcer;
 /******************************************************************************
  * FunctionName : data_send
  * Description  : processing the data as http format and send to the client or server
@@ -39,7 +39,7 @@ webserver_recv(void *arg, char *pusrdata, unsigned short length)
 {
     receive_bytes_count += length;
     Userdata data = {arg, data_send};
-    gril_stream_cmd_parcer_parce(&command_parcer, pusrdata, length,  &data);
+    gril_stream_parcer_parce(&command_parcer, pusrdata, length,  &data);
 }
 
 
@@ -59,9 +59,9 @@ user_webserver_init(uint32 port)
     LOCAL esp_udp espudp;
     LOCAL GrilCommandNameDesc cmd_names[] = {{"print", 5}, {"set", 3}};
 
-    gril_stream_cmd_parcer_init(
+    gril_stream_parcer_init(
         &command_parcer,
-        (parce_res_handler)controller_process_commands,
+        (GrilStreamParcerHandler)controller_process_commands,
         cmd_names,
         2);
 

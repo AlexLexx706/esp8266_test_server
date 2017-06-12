@@ -1,8 +1,8 @@
-#include "gril_stream_cmd_parcer.h"
+#include "gril_stream_parcer.h"
 #include <assert.h>
 
 //extern int os_strncmp(const char * str1, const char * str2, int len);
-#if !defined(TEST) && !defined(TEST_CONTROLLER)
+#ifndef LINUX
 	#include <osapi.h>
 	#include <c_types.h>
 #else
@@ -22,7 +22,7 @@
 	#define ICACHE_FLASH_ATTR
 #endif
 
-enum GrilStreamCmdParcerState {
+enum GrilStreamParcerState {
 	BeginParceState = 0,
 	ReadPrefixState,
 	ReadCmdState,
@@ -33,116 +33,100 @@ enum GrilStreamCmdParcerState {
 
 
 LOCAL void ICACHE_FLASH_ATTR
-gril_stream_cmd_parcer_reinit(GrilStreamCmdParcer * parcer) {
+gril_stream_cmd_parcer_reinit(GrilStreamParcer * parcer) {
 	parcer->state = BeginParceState;
+
 	parcer->pos_prefix = parcer->prefix;
 	*parcer->pos_prefix = 0;
 
 	parcer->pos_cmd = parcer->cmd;
-	*parcer->cmd = 0;
+	*parcer->pos_cmd = 0;
 
 	parcer->pos_param = parcer->param;
-	*parcer->param = 0;
+	*parcer->pos_param = 0;
 
 	parcer->pos_value = parcer->value;
-	*parcer->value = 0;
+	*parcer->pos_value = 0;
 }
 
 
 void ICACHE_FLASH_ATTR
-gril_stream_cmd_parcer_init(GrilStreamCmdParcer * parcer, parce_res_handler handler,
-		GrilCommandNameDesc * commands_list, unsigned char commands_list_len) {
+gril_stream_parcer_init(
+		GrilStreamParcer * parcer,
+		GrilStreamParcerHandler handler,
+		GrilStreamParcerResultSender * sender, 
+		GrilCommandNameDesc * commands_list,
+		unsigned char commands_list_len) {
 	assert(parcer);
 	assert(handler);
+	assert(sender);
 	assert(commands_list);
 	assert(commands_list_len);
 	gril_stream_cmd_parcer_reinit(parcer);	
 	parcer->handler = handler;
+	parcer->sender = sender;
 	parcer->commands_list = commands_list;
 	parcer->commands_list_len = commands_list_len;
+
 }
 
 
 LOCAL void ICACHE_FLASH_ATTR
-complete_parce(GrilStreamCmdParcer * parcer, enum GrilStreamCmdParcerError error, void * user_data) {
+complete_parce(
+		GrilStreamParcer * parcer,
+		enum GrilStreamParcerError error) {
+	GrilStreamParcerResult result;
 	*parcer->pos_prefix = 0;
 	*parcer->pos_cmd = 0;
 	*parcer->pos_param = 0;
 	*parcer->pos_value = 0;
 
-	#ifdef TEST_PRINT
-	fprintf(stderr, "%s error:%d prefix:%s cmd:%s path:%s value:%s handler:%p\n",
-		__FUNCTION__,
-		error,
-		parcer->prefix,
-		parcer->cmd,
-		parcer->param,
-		parcer->value,
-		parcer->handler);
-	#endif
+	result.error = error;
+	result.prefix = parcer->prefix;
+	result.cmd = parcer->cmd;
+	result.param = parcer->param;
+	result.value = parcer->value;
+	result.sender = parcer->sender;
 
-	parcer->handler(error, parcer->prefix, parcer->cmd, parcer->param, parcer->value, user_data);
+	parcer->handler(&result);
 	gril_stream_cmd_parcer_reinit(parcer);
 }
 
 void ICACHE_FLASH_ATTR
-gril_stream_cmd_parcer_parce(GrilStreamCmdParcer * parcer, const char * data, int data_size, void * user_data) {
-	//#ifdef ASSERT
+gril_stream_parcer_parce(
+		GrilStreamParcer * parcer,
+		const char * data,
+		int data_size) {
 	assert(parcer);
 	assert(data);
-	//#endif
 	int i;
 
-	#ifdef TEST_PRINT
-	fprintf(stderr, "gril_stream_cmd_parcer_parce data:%s data_size:%d\n", data, data_size);
-	#endif
 	const char * data_end = &data[data_size]; 
 
 	//[%prefix%][name[,parameter][,value][:option]]<eoc>
 	while (data < data_end) {
-		#ifdef TEST_PRINT
-		fprintf(stderr, "gril_stream_cmd_parcer_parce char:%c\n", *data);
-		#endif
-
 		//end
 		if (*data == GRIL_CMD_COMPLETE_CHAR) {
-			#ifdef TEST_PRINT
-			fprintf(stderr, "gril_stream_cmd_parcer_parce 1\n");
-			#endif
 			switch (parcer->state) {
 				case ReadParamSplitter:
 				case ReadParamState:
 				case ReadDataState:
-					#ifdef TEST_PRINT
-					fprintf(stderr, "gril_stream_cmd_parcer_parce 2\n");
-					#endif
-					complete_parce(parcer, GrilStreamCmdParcerNoError, user_data);
+					complete_parce(parcer, GrilStreamParcerNoError);
 					break;
 				case BeginParceState:
-					#ifdef TEST_PRINT
-					fprintf(stderr, "gril_stream_cmd_parcer_parce 3\n");
-					#endif
-
 					complete_parce(
 						parcer,
-						parcer->pos_prefix == parcer->prefix ? GrilStreamCmdParcerErrorNotComplete : GrilStreamCmdParcerNoError,
-						user_data);
+						parcer->pos_prefix == parcer->prefix ?
+							GrilStreamParcerErrorNotComplete :
+							GrilStreamParcerNoError);
 					break;
 				default:
-					#ifdef TEST_PRINT
-					fprintf(stderr, "gril_stream_cmd_parcer_parce 4\n");
-					#endif
-
-					complete_parce(parcer, GrilStreamCmdParcerErrorNotComplete, user_data);
+					complete_parce(parcer, GrilStreamParcerErrorNotComplete);
 			}
 		}
 
 		switch (parcer->state) {
 			case BeginParceState:
-				#ifdef TEST_PRINT
-				fprintf(stderr, "gril_stream_cmd_parcer_parce BeginParceState\n");
-				#endif
-
 				switch (*data) {
 					case '%':
 						parcer->state = ReadPrefixState;
@@ -158,16 +142,13 @@ gril_stream_cmd_parcer_parce(GrilStreamCmdParcer * parcer, const char * data, in
 				}
 				break;
 			case ReadPrefixState:
-				#ifdef TEST_PRINT
-				fprintf(stderr, "gril_stream_cmd_parcer_parce ReadPrefixState\n");
-				#endif
 				switch (*data) {
 					case '%':
 						parcer->state = BeginParceState;
 						break;
 					default:
 						if (parcer->pos_prefix == &parcer->prefix[sizeof(parcer->prefix)]) {
-							//complete_parce(parcer, handler, GrilStreamCmdParcerErrorPrefixTooLong, user_data);
+							//complete_parce(parcer, handler, GrilStreamParcerErrorPrefixTooLong);
 							gril_stream_cmd_parcer_reinit(parcer);
 						} else
 							*(parcer->pos_prefix++) = *data;
@@ -175,11 +156,8 @@ gril_stream_cmd_parcer_parce(GrilStreamCmdParcer * parcer, const char * data, in
 				}
 				break;
 			case ReadCmdState:
-				#ifdef TEST_PRINT
-				fprintf(stderr, "gril_stream_cmd_parcer_parce ReadCmdState\n");
-				#endif
 				if (parcer->pos_cmd == &parcer->cmd[sizeof(parcer->cmd)]){
-					//complete_parce(parcer, handler, GrilStreamCmdParcerErrorCmdTooLong, user_data);
+					//complete_parce(parcer, handler, GrilStreamParcerErrorCmdTooLong);
 					gril_stream_cmd_parcer_reinit(parcer);
 				} else {
 					*(parcer->pos_cmd++) = *data;
@@ -194,27 +172,20 @@ gril_stream_cmd_parcer_parce(GrilStreamCmdParcer * parcer, const char * data, in
 						}
 					}
 					if (!has_cmd)
-						//complete_parce(parcer, handler, GrilStreamCmdParcerErrorUnknownCmd, user_data);
+						//complete_parce(parcer, handler, GrilStreamParcerErrorUnknownCmd);
 						gril_stream_cmd_parcer_reinit(parcer);
 				}
 				break;
 			case ReadParamSplitter:
-				#ifdef TEST_PRINT
-				fprintf(stderr, "gril_stream_cmd_parcer_parce ReadParamSplitter\n");
-				#endif
 				if (*data != ','){
-					//complete_parce(parcer, handler, GrilStreamCmdParcerErrorWnongParamSplitter, user_data);
+					//complete_parce(parcer, handler, GrilStreamParcerErrorWnongParamSplitter);
 					gril_stream_cmd_parcer_reinit(parcer);
 				} else
 					parcer->state = ReadParamState;
 				break;
 			case ReadParamState:
-				#ifdef TEST_PRINT
-				fprintf(stderr, "gril_stream_cmd_parcer_parce ReadParamState\n");
-				#endif
-
 				if (parcer->pos_param == &parcer->param[sizeof(parcer->param)]) {
-					//complete_parce(parcer, handler, GrilStreamCmdParcerErrorParamTooLong, user_data);
+					//complete_parce(parcer, handler, GrilStreamParcerErrorParamTooLong);
 					gril_stream_cmd_parcer_reinit(parcer);
 				} else {
 					if (*data == ',')
@@ -224,12 +195,8 @@ gril_stream_cmd_parcer_parce(GrilStreamCmdParcer * parcer, const char * data, in
 				}
 				break;
 			case ReadDataState:
-				#ifdef TEST_PRINT
-				fprintf(stderr, "gril_stream_cmd_parcer_parce ReadDataState\n");
-				#endif
-
 				if (parcer->pos_value == &parcer->value[sizeof(parcer->value)]) {
-					//complete_parce(parcer, handler, GrilStreamCmdParcerErrorDataTooLong, user_data);
+					//complete_parce(parcer, handler, GrilStreamParcerErrorDataTooLong);
 					gril_stream_cmd_parcer_reinit(parcer);
 				} else
 					*(parcer->pos_value++) = *data;
@@ -240,44 +207,48 @@ gril_stream_cmd_parcer_parce(GrilStreamCmdParcer * parcer, const char * data, in
 }
 
 
-#ifdef TEST
+#ifdef GRIL_STREAM_PARCER_TEST
 int main() {
-	GrilStreamCmdParcer parcer;
+	GrilStreamParcer parcer;
 	char * test_str[] = {"123123\n", "%12%\n", "%sdsd\n", "%%en\n", "%set\n", "print,\n", "set,xx/sd,23\n"};
-	//char * test_str[] = {"%abc%set,xx/sd,23\r"};
 	int i;
 	static const char * errr_descs[] = {
-		"GrilStreamCmdParcerNoError",
-		"GrilStreamCmdParcerErrorPrefixNotComplete",
-		"GrilStreamCmdParcerErrorPrefixTooLong",
-		"GrilStreamCmdParcerErrorNotComplete",
-		"GrilStreamCmdParcerErrorCmdTooLong",
-		"GrilStreamCmdParcerErrorUnknownCmd",
-		"GrilStreamCmdParcerErrorWnongParamSplitter",
-		"GrilStreamCmdParcerErrorParamTooLong",
-		"GrilStreamCmdParcerErrorDataTooLong"
+		"GrilStreamParcerNoError",
+		"GrilStreamParcerErrorPrefixNotComplete",
+		"GrilStreamParcerErrorPrefixTooLong",
+		"GrilStreamParcerErrorNotComplete",
+		"GrilStreamParcerErrorCmdTooLong",
+		"GrilStreamParcerErrorUnknownCmd",
+		"GrilStreamParcerErrorWnongParamSplitter",
+		"GrilStreamParcerErrorParamTooLong",
+		"GrilStreamParcerErrorDataTooLong"
 	};
 
-	void parce_handler(enum GrilStreamCmdParcerError error, const char * prefix, const char * cmd, const char * param, const char * value, void * user_data) {
+	void parcer_handler(GrilStreamParcerResult * result) {
 		fprintf(stderr, "parce_handler prefix:%s, cmd:%s param:%s, value:%s error:%d errr_descs: %s\n",
-			prefix,
-			cmd,
-			param,
-			value,
-			error,
-			errr_descs[error]);
+			result->prefix,
+			result->cmd,
+			result->param,
+			result->value,
+			result->error,
+			errr_descs[result->error]);
+		result->sender->fun_send(result->sender->sender, "res", 3);
+	}
+
+	void send_fun(void * sender, const char * res_str, int str_len) {
+		fprintf(stderr, "send_fun res_str:%s str_len:%d\n", res_str, str_len);
 	}
 
 	GrilCommandNameDesc cmd_names[] = {{"print", 5}, {"set", 3}};
-	gril_stream_cmd_parcer_init(&parcer, parce_handler, cmd_names, 2);
-
+	GrilStreamParcerResultSender result_sender = {0, send_fun};
+	gril_stream_parcer_init(&parcer, parcer_handler, &result_sender, cmd_names, 2);
 
 	for (i=0; i < sizeof(test_str)/sizeof(char *); i++) {
 		char tmp[50];
 		strcpy(tmp, test_str[i]);
 		tmp[strlen(tmp) - 1] = 0;
 		fprintf(stderr, "test str:%s\n", tmp);
-		gril_stream_cmd_parcer_parce(&parcer, test_str[i], strlen(test_str[i]), NULL);	
+		gril_stream_parcer_parce(&parcer, test_str[i], strlen(test_str[i]), NULL);	
 	}
 	return 0;
 }
