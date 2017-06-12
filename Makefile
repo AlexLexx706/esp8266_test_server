@@ -31,7 +31,7 @@ ESPPORT		?= /dev/ttyUSB0
 TARGET		= app
 
 # which modules (subdirectories) of the project to include in compiling
-MODULES		= driver user utils
+MODULES		= driver user utils user/gril
 EXTRA_INCDIR    = include
 
 # libraries used in this project, mainly provided by the SDK

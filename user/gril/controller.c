@@ -203,7 +203,6 @@ controller_process_commands(struct GrilStreamParcerResult_t * parcer_res) {
 }
 
 
-#define TEST_CONTROLLER
 #ifdef TEST_CONTROLLER
 void send_data(void *socket, const char *string, int str_len) {
 	fprintf(stderr, "%s res:%s", __FUNCTION__, string);
