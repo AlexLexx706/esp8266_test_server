@@ -5,7 +5,7 @@
 #ifndef LINUX
 	#include "user_interface.h"
 	#include "osapi.h"
-#else 
+#else
 	#define LOCAL static
 	#define ICACHE_FLASH_ATTR
 	#define os_strcmp strcmp
@@ -52,13 +52,6 @@ void buffered_sender_flush(
 		len_buffer,
 		os_sprintf(len_buffer, "%03X", len));
 
-	//send data
-	fprintf(stderr, "%s count:%d begin:%p pos:%p\n",
-		__FUNCTION__,
-		sender->count,
-		sender->begin,
-		sender->pos);
-
 	if (sender->count == 0 || sender->begin != sender->pos) {
 		*(sender->pos++) = '\n';
 		sender->parcer_res->sender->fun_send(
@@ -85,13 +78,11 @@ void buffered_sender_send(
 		len = end - res_str;
 		//copy to buffer
 		if ((sender->end - sender->pos) >= len) {
-			fprintf(stderr, "%s 1. \n", __FUNCTION__);
 			os_memcpy(sender->pos, res_str, len);
 			res_str = end;
 			sender->pos += len;
 		//flush to file
 		} else {
-			fprintf(stderr, "%s 2. \n", __FUNCTION__);
 			len = sender->end - sender->pos;
 			os_memcpy(sender->pos, res_str, len);
 			res_str += len;

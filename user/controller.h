@@ -31,6 +31,12 @@ typedef struct GrilTreeItem_t {
 void controller_init(GrilTreeItem * root);
 
 /**
+    Init root item, set default functor for item
+*/
+void controller_init_item(
+    GrilTreeItem * parent, GrilTreeItem * item, const char * name);
+
+/**
 	Process data from gril parcer, and return results.
 	params:
 		parcer_res - parcer result;
